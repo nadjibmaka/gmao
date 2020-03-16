@@ -60,6 +60,28 @@ public class DocumentsAPIs {
     public List<OrdreDeTravail> getOrdresDeTravail(@PathVariable String username) {
         return ordreRepository.findAllByCadre_Username(username);
     }
+    @PutMapping("/Documents/{cadreUsername}/OrdreDeTravail")
+    @PreAuthorize("hasRole('CADRE') or hasRole('ADMIN')")
+    public ResponseEntity<?> updateOrdreDeTravail(@RequestBody OrdreDeTravail ordreDeTravail, @PathVariable String cadreUsername) {
+        System.out.println("ordre update"+ ordreDeTravail);
+
+        OrdreDeTravail ordreDeTravail1= ordreRepository.findById(ordreDeTravail.getIdDocument()).get();
+        Cadre cadre = cadreRepository.findByUsername(cadreUsername);
+        ordreDeTravail1=ordreDeTravail;
+        ordreDeTravail1.setCadre(cadre);
+
+        ordreRepository.save(ordreDeTravail1);
+        return  new ResponseEntity<>(new ResponseMessage("Ordre de Travail updated successfully!"), HttpStatus.OK);
+    }
+
+
+
+    @GetMapping("/Documents/OrdresDeTravail/{idOrdre}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CADRE')" )
+    public OrdreDeTravail getOrdreDeTravail(@PathVariable Long idOrdre) {
+        return ordreRepository.findById(idOrdre).get();
+    }
+
     @GetMapping("/Documents/{codeStation}/DemandesDeTravail/{username}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('COMMERCIAL')" )
     public List<DemandeDeTravail> getDemandeDeTravailofStationAndUsername(@PathVariable String username,@PathVariable String codeStation ) {
@@ -207,6 +229,8 @@ public class DocumentsAPIs {
         for (DemandePDRLigneForm dl:demandePDRlignesForms
         ) {
             demandePDRlignes.add(new DemandePDRligne(dl.getIdLigne(),pdrRepository.findByIdPDR(dl.getIdPdr()),dl.getQuantite(),demandePDR));
+
+
         }
         demandePDR.setDemandePDRlignes(demandePDRlignes);
         System.out.println("ooooooooooooooooooooorde"+ordreDeTravail.getIdDocument());
@@ -219,6 +243,31 @@ public class DocumentsAPIs {
     }
 
 
+    @PutMapping("/Documents/{cadreUsername}/DemandePDR/{idOrdre}")
+    public ResponseEntity<?> updateDemandePDR(@Valid @RequestBody List<DemandePDRLigneForm>demandePDRlignesForms, @PathVariable String cadreUsername,@PathVariable Long idOrdre) {
+        OrdreDeTravail ordreDeTravail = ordreRepository.findById(idOrdre).get();
+        System.out.println("save demandePDR called");
+        System.out.println(demandePDRlignesForms);
+        Cadre cadre= cadreRepository.findByUsername(cadreUsername);
+        DemandePDR demandePDR = demandePdrRepository.findById(ordreDeTravail.getDemandePDR().getIdDocument()).get();
+        demandePDR.setCadre(cadre);
+
+        List<DemandePDRligne>demandePDRlignes = new ArrayList<>();
+        for (DemandePDRLigneForm dl:demandePDRlignesForms
+        ) {
+            demandePDRlignes.add(new DemandePDRligne(dl.getIdLigne(),pdrRepository.findByIdPDR(dl.getIdPdr()),dl.getQuantite(),demandePDR));
+
+
+        }
+        demandePDR.setDemandePDRlignes(demandePDRlignes);
+        System.out.println("ooooooooooooooooooooorde"+ordreDeTravail.getIdDocument());
+
+        ordreDeTravail.setDemandePDR(demandePDR);
+        ordreRepository.save(ordreDeTravail);
+
+
+        return new ResponseEntity<>(new ResponseMessage("Demande PDR registred successfully!"), HttpStatus.OK);
+    }
 
 
 }

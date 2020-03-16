@@ -72,15 +72,13 @@ public class UserAPIs {
     public Utilisateur getUtilisateurbyMatriculeUser(@PathVariable String matricule)
 
     {
-        System.out.println("get user called");
+//        System.out.println("get user called");
         return userRepository.findByMatricule(matricule);
     }
 
     @GetMapping("/User/{username}")
     public Utilisateur getUserbyUsername(@PathVariable String username){
-        System.out.println("looking for "+username);
         return userRepository.findByUsername(username).get();
-
     }
 
 
