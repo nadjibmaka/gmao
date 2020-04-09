@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 
@@ -19,13 +21,17 @@ public class DemandePDRligne {
 
     @ManyToOne
     @JoinColumn(name="IdPDR")
+    @Fetch(FetchMode.JOIN)
     private PDR pdr ;
 
-    private int quantite ;
+    private int quantiteDemande;
+    private int quantiteAccorde;
+    private int quantiteUtilise;
 
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name="IDdemandePDR")
+    @Fetch(FetchMode.JOIN)
     private DemandePDR demandePDR;
 
 

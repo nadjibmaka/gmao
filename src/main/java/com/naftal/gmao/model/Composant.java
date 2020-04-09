@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 
@@ -29,6 +31,7 @@ private String type;
 @ManyToOne
 @JoinColumn(name="equipementNS")
 @JsonIgnore
+@Fetch(FetchMode.JOIN)
 private Equipement equipement;
 
 }

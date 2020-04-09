@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ public class Panne {
 
    @ManyToOne
    @JoinColumn(name="equipementNS")
+   @Fetch(FetchMode.JOIN)
    private Equipement equipement;
 
 
@@ -39,10 +42,12 @@ public class Panne {
     @JoinTable(name = "pannes_composants",
             joinColumns = @JoinColumn(name = "idPanne"),
             inverseJoinColumns = @JoinColumn(name = "cnumS"))
+    @Fetch(FetchMode.SUBSELECT)
     private List<Composant> composants = new ArrayList<>();
 
     @JsonIgnore
     @OneToOne(mappedBy = "panne")
+    @Fetch(FetchMode.JOIN)
     private DemandeDeTravail demandeDeTravail;
 
 }

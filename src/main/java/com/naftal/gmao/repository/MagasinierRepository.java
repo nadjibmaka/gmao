@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MagasinierRepository extends JpaRepository<Magasinier, Long> {
+    Magasinier findByUsername(String username);
 }

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.springframework.lang.Nullable;
 
 import javax.persistence.*;
@@ -37,20 +39,23 @@ public class Equipement {
 
  private Long prix;
 
-    @Column(columnDefinition = "integer default 0")
+ @Column(columnDefinition = "integer default 0")
  private Long depenses = Long.valueOf(0);
 
 
  @OneToMany(fetch = FetchType.LAZY, mappedBy = "equipement",cascade = CascadeType.ALL)
+ @Fetch(FetchMode.SUBSELECT)
     private List<Composant> composants;
 
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "equipement",cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private List<Panne> pannes ;
 
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="codeStation")
+    @Fetch(FetchMode.JOIN)
     private Station station;
 
     @Column(columnDefinition = "boolean default true")

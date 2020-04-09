@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -23,10 +25,12 @@ public class Cadre extends  Utilisateur{
 
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "cadre")
+    @Fetch(FetchMode.SUBSELECT)
     private  List<DemandePDR> demandePDRs;
 
     @JsonIgnore
     @OneToMany(mappedBy = "cadre" , fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     private List<OrdreDeTravail> ordreDeTravails;
 
 

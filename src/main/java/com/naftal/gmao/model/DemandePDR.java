@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 import java.util.*;
@@ -16,33 +18,21 @@ public class DemandePDR extends Document {
 
     @ManyToOne
     @JoinColumn(name = "matriculeCadre")
+    @Fetch(FetchMode.JOIN)
     private Cadre cadre;
-
-
-//    @ManyToMany(fetch = FetchType.LAZY)
-//    @JoinTable(name = "demandePDRs_PDRs",
-//            joinColumns = @JoinColumn(name = "idDocument"),
-//            inverseJoinColumns = @JoinColumn(name = "idPDR"))
-//    private Set<PDR> PDRs = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "matriculeMagasinier")
+    @Fetch(FetchMode.JOIN)
     private Magasinier magasinier;
 
-//    @ElementCollection
-//    @CollectionTable(name = "PDR_Quantite")
-//    @MapKeyJoinColumn(name = "idPDR")
-//    @Column(name = "Quantite")
-//    private Map<PDR, Integer> quantites= new HashMap<>();
-
-
-
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "demandePDR",cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private List<DemandePDRligne> demandePDRlignes;
-
 
     @JsonIgnore
     @OneToOne(mappedBy = "demandePDR")
+    @Fetch(FetchMode.JOIN)
     private OrdreDeTravail ordreDeTravail;
 
 }

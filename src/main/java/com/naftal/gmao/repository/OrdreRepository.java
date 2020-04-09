@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface OrdreRepository extends JpaRepository<OrdreDeTravail, Long> {
-    List<OrdreDeTravail> findAllByCadre_Username(String username);
+    List<OrdreDeTravail> findAllByCadre_UsernameOrderByDateDesc(String username);
+    List<OrdreDeTravail> findAllByIntervenants_UsernameAndTraite(String username,Boolean traite);
 }

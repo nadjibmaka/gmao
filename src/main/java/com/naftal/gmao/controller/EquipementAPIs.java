@@ -30,7 +30,7 @@ public class EquipementAPIs {
     @GetMapping("/equipements")
     @PreAuthorize("hasRole('ADMIN')")
     public List<Equipement> getEquipements() {
-        System.out.println("get equipements called");
+//        System.out.println("get equipements called");
 
         List<Equipement> list = equipementRepository.findByExiste(true);
         return list;
@@ -41,7 +41,7 @@ public class EquipementAPIs {
     @GetMapping("/equipements/{NS}")
     @PreAuthorize("hasRole('ADMIN')")
     public Equipement getEquipement(@PathVariable String NS) {
-        System.out.println("get equipement called");
+//        System.out.println("get equipement called");
 
        Equipement equipement = equipementRepository.findByEquipementNS(NS);
         return equipement;
@@ -52,7 +52,7 @@ public class EquipementAPIs {
     @PostMapping("/saveEquipement/{codeStation}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveEquipement(@Valid @RequestBody Equipement equipement, @PathVariable String codeStation) {
-        System.out.println("save equipement called");
+//        System.out.println("save equipement called");
 
         Station station=stationRepository.findByCodeStation(codeStation);
         equipement.setStation(station);
@@ -70,7 +70,7 @@ public class EquipementAPIs {
 
 
 
-        System.out.println("put equipement called");
+//        System.out.println("put equipement called");
         Equipement equipement2= equipementRepository.findByEquipementNS(NS);
         for (Composant comp:equipement2.getComposants()) {
             comp.setEquipement(null);

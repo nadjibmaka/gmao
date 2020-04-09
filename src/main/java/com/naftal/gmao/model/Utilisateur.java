@@ -1,6 +1,8 @@
 package com.naftal.gmao.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.NaturalId;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -64,6 +66,7 @@ public class Utilisateur {
     @JoinTable(name = "user_roles",
     	joinColumns = @JoinColumn(name = "matricule"),
     	inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Fetch(FetchMode.SUBSELECT)
     private Set<Role> roles = new HashSet<>();
 
     public Utilisateur() {}

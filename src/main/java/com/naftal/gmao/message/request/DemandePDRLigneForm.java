@@ -11,7 +11,9 @@ public class DemandePDRLigneForm {
 
     private Long idPdr ;
 
-    private int quantite ;
+    private int quantiteDemande;
+    private int quantiteAccorde;
+    private int quantiteUtilise;
 
 
 }
