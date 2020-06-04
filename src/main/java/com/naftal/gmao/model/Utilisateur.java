@@ -26,6 +26,11 @@ import java.util.Set;
 })
 @Inheritance(strategy = InheritanceType.JOINED)
 
+//@NamedEntityGraph(name = "utilisateurRole",
+//        attributeNodes = {
+//        @NamedAttributeNode("roles")
+//        }
+//)
 public class Utilisateur {
     @Id
     private String matricule;
@@ -62,7 +67,7 @@ public class Utilisateur {
     @Size(min=6, max = 100)
     private String password;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinTable(name = "user_roles",
     	joinColumns = @JoinColumn(name = "matricule"),
     	inverseJoinColumns = @JoinColumn(name = "role_id"))

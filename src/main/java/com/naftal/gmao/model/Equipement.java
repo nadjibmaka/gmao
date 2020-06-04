@@ -15,6 +15,22 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
+@NamedEntityGraph(name = "equipementGraph",
+        attributeNodes = {
+        @NamedAttributeNode(value = "station", subgraph = "station.chef"),
+        @NamedAttributeNode(value = "composants")
+
+        },
+        subgraphs = {
+        @NamedSubgraph(
+                name = "station.chef",
+                attributeNodes = {
+                        @NamedAttributeNode(value = "chefStation",subgraph = "chefstationRole")
+                }
+        ),@NamedSubgraph(name = "chefstationRole",attributeNodes = @NamedAttributeNode("roles"))
+        }
+)
+
 @NoArgsConstructor
 @Data
 @AllArgsConstructor
@@ -37,23 +53,28 @@ public class Equipement {
  @JsonFormat(pattern="yyyy-MM-dd")
  private Date dateFabrication;
 
+ @JsonFormat(pattern="yyyy-MM-dd")
+ private Date dateDernierePanne;
+
+
  private Long prix;
 
  @Column(columnDefinition = "integer default 0")
  private Long depenses = Long.valueOf(0);
 
 
- @OneToMany(fetch = FetchType.LAZY, mappedBy = "equipement",cascade = CascadeType.ALL)
+ @OneToMany(mappedBy = "equipement",cascade = CascadeType.ALL)
  @Fetch(FetchMode.SUBSELECT)
     private List<Composant> composants;
 
     @JsonIgnore
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "equipement",cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "equipement",cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private List<Panne> pannes ;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
+
+    @ManyToOne
     @JoinColumn(name="codeStation")
     @Fetch(FetchMode.JOIN)
     private Station station;
@@ -61,4 +82,16 @@ public class Equipement {
     @Column(columnDefinition = "boolean default true")
     private boolean existe=true;
 
+    public Equipement(String equipementNS, String designation, int nbPanne, @Nullable String type, String marque, Date dateFabrication, Long prix, Long depenses, Station station, boolean existe) {
+        this.equipementNS = equipementNS;
+        this.designation = designation;
+        this.nbPanne = nbPanne;
+        this.type = type;
+        this.marque = marque;
+        this.dateFabrication = dateFabrication;
+        this.prix = prix;
+        this.depenses = depenses;
+        this.station = station;
+        this.existe = existe;
+    }
 }

@@ -1,16 +1,37 @@
 package com.naftal.gmao.controller;
 
 import com.naftal.gmao.message.response.ResponseMessage;
+import com.naftal.gmao.model.Station;
+import com.naftal.gmao.repository.EquipementRepository;
+import com.naftal.gmao.repository.PdrRepository;
+import com.naftal.gmao.repository.StationRepository;
+import com.naftal.gmao.services.CSVService;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.input.BOMInputStream;
+import org.jfree.io.IOUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.*;
+import java.net.URL;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.swing.*;
-import java.io.File;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.CodeSource;
@@ -20,58 +41,100 @@ import java.security.CodeSource;
 public class DatabaseAPIs {
 
 
+    @Autowired
+    CSVService csvService;
+
+    @Autowired
+    StationRepository stationRepository;
+
+    @Autowired
+    EquipementRepository equipementRepository;
+
+    @Autowired
+    PdrRepository pdrRepository;
 
 
-    @GetMapping("/SaveDatabase")
+    @GetMapping("/saveStations")
     @PreAuthorize("hasRole('ADMIN')" )
-    public ResponseEntity<?> SaveDatabase() {
+    public ResponseEntity<Resource> SaveStations() throws IOException {
+        InputStreamResource file = new InputStreamResource(csvService.exportStationFile());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stationsDB.csv")
+                .contentType(MediaType.parseMediaType("application/csv"))
+                .body(file);
+    }
 
-        try {
-            System.out.println("saving database");
-            /*NOTE: Getting path to the Jar file being executed*/
-            /*NOTE: YourImplementingClass-> replace with the class executing the code*/
+
+    @PostMapping("/uploadStations")
+    @PreAuthorize("hasRole('ADMIN')" )
+    public ResponseEntity<?> uploadStations(@Valid @RequestBody MultipartFile file) throws IOException {
+         if (stationRepository.count()==0) {
+             csvService.uploadStationFile(file);}
+         else {
+             return new ResponseEntity<>(new ResponseMessage("table des station existe deja"), HttpStatus.NOT_ACCEPTABLE);
+
+         }
+        return new ResponseEntity<>(new ResponseMessage("stations saved successfully!"), HttpStatus.OK);
+    }
+
+    @GetMapping("/saveEquipements")
+    @PreAuthorize("hasRole('ADMIN')" )
+    public ResponseEntity<Resource> SaveEquipements() throws IOException {
+        InputStreamResource file = new InputStreamResource(csvService.exportEquipementsFile());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=equipementsDB.csv")
+                .contentType(MediaType.parseMediaType("application/csv"))
+                .body(file);
+    }
 
 
-            /*NOTE: Creating Database Constraints*/
-            String dbName = "naftaldb";
-            String dbUser = "root";
-            String dbPass = "root";
+    @PostMapping("/uploadEquipements")
+    @PreAuthorize("hasRole('ADMIN')" )
+    public ResponseEntity<?> uploadEquipements(@Valid @RequestBody MultipartFile file) throws IOException, ParseException {
 
-            /*NOTE: Creating Path Constraints for folder saving*/
-            /*NOTE: Here the backup folder is created for saving inside it*/
-            String folderPath = "C:\\Users\\inter\\Documents\\DatabaseSavings";
-
-            /*NOTE: Creating Folder if it does not exist*/
-            File f1 = new File(folderPath);
-            f1.mkdir();
-
-            /*NOTE: Creating Path Constraints for backup saving*/
-            /*NOTE: Here the backup is saved in a folder called backup with the name backup.sql*/
-            String savePath = "\"" + folderPath + "\\backup\\" + "backup.sql\"";
-
-            /*NOTE: Used to create a cmd command*/
-            String executeCmd = "C:\\Program Files\\MySQL\\MySQL Workbench 6.3 CE\\mysqldump -u" + dbUser + " -p" + dbPass + " --database " + dbName + " -r " + savePath;
-
-            /*NOTE: Executing the command here*/
-            Process runtimeProcess = Runtime.getRuntime().exec(executeCmd);
-            int processComplete = runtimeProcess.waitFor();
-
-            /*NOTE: processComplete=0 if correctly executed, will contain other values if not*/
-            if (processComplete == 0) {
-                System.out.println("Backup Complete");
-            } else {
-                System.out.println("Backup Failure");
-            }
-
-        } catch ( IOException | InterruptedException ex) {
-            JOptionPane.showMessageDialog(null, "Error at Backuprestore" + ex.getMessage());
+        if (stationRepository.count()>0) {
+            if (equipementRepository.count()==0) {
+            csvService.uploadEquipementsFile(file);}
+        else {
+            return new ResponseEntity<>(new ResponseMessage("table des equipements existe deja"), HttpStatus.NOT_ACCEPTABLE);
         }
-
-
-
-        return new ResponseEntity<>(new ResponseMessage("database saved successfully!"), HttpStatus.OK);
-
+        return new ResponseEntity<>(new ResponseMessage("Equipements saved successfully!"), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(new ResponseMessage("Tables des stations vide"), HttpStatus.NOT_ACCEPTABLE);
+        }
     }
 
 
+
+    @GetMapping("/savePDR")
+    @PreAuthorize("hasRole('MAGASINIER') or hasRole('ADMIN')" )
+    public ResponseEntity<Resource> SavePDR() throws IOException {
+        InputStreamResource file = new InputStreamResource(csvService.exportPDRFile());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=pdrDB.csv")
+                .contentType(MediaType.parseMediaType("application/csv"))
+                .body(file);
     }
+
+
+    @PostMapping("/uploadPDR")
+    @PreAuthorize("hasRole('MAGASINIER') or hasRole('ADMIN')" )
+    public ResponseEntity<?> uploadPDR(@Valid @RequestBody MultipartFile file) throws IOException {
+        if (pdrRepository.count()==0) {
+            csvService.uploadPDRFile(file);}
+        else {
+            return new ResponseEntity<>(new ResponseMessage("table des pdr existe deja"), HttpStatus.NOT_ACCEPTABLE);
+
+        }
+        return new ResponseEntity<>(new ResponseMessage("pdr saved successfully!"), HttpStatus.OK);
+    }
+
+
+
+
+
+
+
+
+}

@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -143,7 +144,7 @@ public class AuthRestAPIs {
 					intervenant.setUsername(signUpRequest.getUsername());
 					intervenant.setPassword(encoder.encode(signUpRequest.getPassword()));
 					intervenant.setDisponible(true);
-					intervenant.setNbHeurs(0);
+					intervenant.setNbHeurs(new ArrayList<NbHeureLigne>());
 					intervenant.setRoles(roles);
 
 					Secteur secteur;
@@ -184,7 +185,7 @@ public class AuthRestAPIs {
 
 					}
 
-					System.out.println("iiiiiiiiiiinnnnnnnnnnt"+intervenant);
+//					System.out.println("iiiiiiiiiiinnnnnnnnnnt"+intervenant);
 					intervenantRepository.save(intervenant);
 					break;
 

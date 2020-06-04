@@ -11,10 +11,13 @@ import java.util.List;
 @Repository
 public interface EquipementRepository extends JpaRepository<Equipement, String> {
 
-    List<Equipement> findByStationCodeStation(String codeStation);
+    @EntityGraph(value = "equipementGraph")
+    List<Equipement> findByStationCodeStationOrderByEquipementNS(String codeStation);
 
-    List<Equipement> findByExiste(boolean existe);
+    @EntityGraph(value = "equipementGraph")
+    List<Equipement> findByExisteOrderByEquipementNS(boolean existe);
 
+    @EntityGraph(value = "equipementGraph")
     Equipement findByEquipementNS(String equipementNS);
 
 }

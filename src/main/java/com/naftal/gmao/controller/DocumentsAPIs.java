@@ -6,17 +6,28 @@ import com.naftal.gmao.model.*;
 import com.naftal.gmao.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.twilio.Twilio;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 public class DocumentsAPIs {
+
+    private final List<SseEmitter> sseEmitters = Collections.synchronizedList(new ArrayList<>());
+
 
 
     @Autowired
@@ -57,10 +68,23 @@ public class DocumentsAPIs {
     @Autowired
     DemandePDRLigneRepository demandePDRLigneRepository;
 
+    @Autowired
+    IntervenantRepository intervenantRepository;
+
+    @Autowired
+    ComposantRepositoty composantRepositoty;
+
+
+    @GetMapping("/Documents/DemandesDeTravail")
+    @PreAuthorize("hasRole('ADMIN')" )
+    public List<DemandeDeTravail> getAllDemandeDeTravail() {
+        return demandeRepository.findAll();
+    }
+
     @GetMapping("/Documents/{username}/DemandesDeTravail")
     @PreAuthorize("hasRole('ADMIN') or hasRole('CHEFSTATION')" )
     public List<DemandeDeTravail> getDemandeDeTravail(@PathVariable String username) {
-        return demandeRepository.findAllByEmetteur_Username(username);
+        return demandeRepository.findAllByEmetteur_UsernameOrderByDateDesc(username);
     }
 
     @GetMapping("/Documents/{username}/OrdresDeTravail")
@@ -83,7 +107,7 @@ public class DocumentsAPIs {
     @PutMapping("/Documents/{cadreUsername}/OrdreDeTravail")
     @PreAuthorize("hasRole('CADRE') or hasRole('ADMIN')")
     public ResponseEntity<?> updateOrdreDeTravail(@RequestBody OrdreDeTravail ordreDeTravail, @PathVariable String cadreUsername) {
-        System.out.println("ordre update"+ ordreDeTravail);
+//        System.out.println("ordre update"+ ordreDeTravail);
 
         OrdreDeTravail ordreDeTravail1= ordreRepository.findById(ordreDeTravail.getIdDocument()).get();
         Cadre cadre = cadreRepository.findByUsername(cadreUsername);
@@ -99,11 +123,18 @@ public class DocumentsAPIs {
     public OrdreDeTravail getOrdreDeTravail(@PathVariable Long idOrdre) {
         return ordreRepository.findById(idOrdre).get();
     }
+    @GetMapping("/Documents/OrdresDeTravail")
+    @PreAuthorize("hasRole('ADMIN')" )
+    public List< OrdreDeTravail> getAllOrdreDeTravail() {
+        return ordreRepository.findAll();
+    }
+
 
     @GetMapping("/Documents/{codeStation}/DemandesDeTravail/{username}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('COMMERCIAL')" )
     public List<DemandeDeTravail> getDemandeDeTravailofStationAndUsername(@PathVariable String username,@PathVariable String codeStation ) {
-        List<DemandeDeTravail> list = demandeRepository.findAllByEmetteur_Username(username);
+        List<DemandeDeTravail> list = demandeRepository.findAllByEmetteur_UsernameOrderByDateDesc(username);
+//        System.out.println(list);
         List<DemandeDeTravail> listfinal = new ArrayList<>();
         for (DemandeDeTravail demandeDeTravail : list){
             if(demandeDeTravail.getPanne().getEquipement().getStation().getCodeStation().equals(codeStation)) {
@@ -118,16 +149,49 @@ public class DocumentsAPIs {
     public ResponseEntity<?> saveDemandeDeTravail(@RequestBody Panne panne,@PathVariable String codeStation,@PathVariable String username) {
         DemandeDeTravail unedemande = new DemandeDeTravail();
         Utilisateur utilisateur = userRepository.findByUsername(username).get();
-        System.out.println("description");
-        System.out.println(panne);
+//        System.out.println("description");
+//        System.out.println(panne);
         Station station = stationRepository.findByCodeStation(codeStation);
         incrementNbPanneOfEquipement(panne,station);
         panneRepository.save(panne);
         unedemande.setPanne(panne);
         unedemande.setEmetteur(utilisateur);
+
         demandeRepository.save(unedemande);
+
+        synchronized (this.sseEmitters) {
+            for (SseEmitter sseEmitter : this.sseEmitters) {
+                try {
+//                    System.out.println("inside the methode =====================================");
+                    sseEmitter.send("created"+unedemande.getIdDocument(), MediaType.APPLICATION_JSON);
+                    sseEmitter.complete();
+                } catch (Exception e) {
+                    //???
+                }
+            }
+        }
+
+
         return new ResponseEntity<>(new ResponseMessage("Demande de travail registred successfully!"), HttpStatus.OK);
     }
+
+    @GetMapping("/DemandeDeTravail/subscribe")
+    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('CADRE')" )
+    public SseEmitter subscribe() {
+        SseEmitter sseEmitter = new SseEmitter();
+        synchronized (this.sseEmitters) {
+            this.sseEmitters.add(sseEmitter);
+            sseEmitter.onCompletion(() -> {
+                synchronized (this.sseEmitters) {
+                    this.sseEmitters.remove(sseEmitter);
+                }
+            });
+            sseEmitter.onTimeout(sseEmitter::complete);
+        }
+        return sseEmitter;
+    }
+
+
 
     private void incrementNbPanneOfEquipement(Panne panne,Station station) {
         Equipement equipement = panne.getEquipement();
@@ -166,7 +230,7 @@ public class DocumentsAPIs {
     }
 
     @GetMapping("/Documents/DemandesDeTravail/{idDemandeDetravail}/panne")
-    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL')")
+    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL') or hasRole('CADRE')or hasRole('ADMIN')")
     public Panne getPanneFromDocument(@PathVariable Long idDemandeDetravail) {
         DemandeDeTravail document = demandeRepository.findById(idDemandeDetravail).get();
         //  System.out.println(document.getPanne().getDescription());
@@ -190,9 +254,15 @@ public class DocumentsAPIs {
     @PutMapping("/UpdateLigneDemandePDR/{magasinier}")
     @PreAuthorize("hasRole('MAGASINIER')")
     public ResponseEntity<?> updateLigne(@RequestBody DemandePDR demandePDR, @PathVariable String magasinier) {
+//        System.out.println("=====================================================");
+//        System.out.println(demandePDR.getDemandePDRlignes().get(0).getPdr().getPrix());
         DemandePDR demandePDR1 = demandePdrRepository.findById(demandePDR.getIdDocument()).get();
         for (DemandePDRligne demandePDRligne: demandePDR.getDemandePDRlignes()) {
             demandePDRligne.setDemandePDR(demandePDR1);
+            PDR pdr = pdrRepository.findByIdPDR(demandePDRligne.getPdr().getIdPDR());
+            if (demandePDRligne.getPdr().getPrix() != pdr.getPrix()) {
+                pdrRepository.save(demandePDRligne.getPdr());
+            }
         }
         demandePDR1.setDemandePDRlignes(demandePDR.getDemandePDRlignes());
         Magasinier magasinier1 = magasinierRepository.findByUsername(magasinier);
@@ -207,29 +277,34 @@ public class DocumentsAPIs {
     @PreAuthorize("hasRole('ADMIN') or hasRole('CADRE')" )
     public List<DemandeDeTravail> getAllNewDemandeDeTravail()
     {
-        return demandeRepository.findAllByTraite(false);
+        return demandeRepository.findAllByTraiteOrderByDateDesc(false);
     }
 
     @GetMapping("/Documents/DemandesDeTravail/{idDemande}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('CADRE')" )
-    public DemandeDeTravail getAllNewDemandeDeTravail(@PathVariable Long idDemande) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CADRE') or hasRole('CHEFSTATION')" )
+    public DemandeDeTravail getDemandeDeTravail(@PathVariable Long idDemande) {
         return demandeRepository.findByIdDocument(idDemande);
     }
 
     @GetMapping("/DemandesPDR")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MAGASINIER')" )
     public List<DemandePDR> getAllDemandesPDR() {
-        return demandePdrRepository.findAllByMagasinierAndAndOrdreDeTravail_Traite(null,true);
+        return demandePdrRepository.findAllByMagasinierAndAndOrdreDeTravail_TraiteOrderByDateDesc(null,true);
+    }
+    @GetMapping("/AllDemandesPDR")
+    @PreAuthorize("hasRole('ADMIN') " )
+    public List<DemandePDR> getAllDemandesPDRAdmin() {
+        return demandePdrRepository.findAll();
     }
     @GetMapping("/DemandesPDR/{username}/valides")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MAGASINIER')" )
     public List<DemandePDR> getAllDemandesPDRValides(@PathVariable String username) {
-        return demandePdrRepository.findAllByMagasinier_UsernameAndTraite(username,true);
+        return demandePdrRepository.findAllByMagasinier_UsernameAndTraiteOrderByDateDesc(username,true);
     }
     @GetMapping("/DemandesPDR/{username}/Nonvalides")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MAGASINIER')" )
     public List<FicheDeTravaux> getAllDemandesPDRNonValides(@PathVariable String username) {
-        return ficheRepository.findAllByOrdreDeTravail_DemandePDR_Magasinier_UsernameAndOrdreDeTravail_DemandePDR_Traite(username,false);
+        return ficheRepository.findAllByOrdreDeTravail_DemandePDR_Magasinier_UsernameAndOrdreDeTravail_DemandePDR_TraiteOrderByDateDesc(username,false);
     }
 
 
@@ -238,6 +313,7 @@ public class DocumentsAPIs {
     public ResponseEntity<?> validerDemandePDR( @PathVariable Long idFiche) {
         FicheDeTravaux ficheDeTravaux = ficheRepository.findById(idFiche).get();
         ficheDeTravaux.setValideMagasinier(true);
+        ficheDeTravaux.setValidationMagasinierdate(new Date());
 
         DemandePDR demandePDR1 = demandePdrRepository.findById(ficheDeTravaux.getOrdreDeTravail().getDemandePDR().getIdDocument()).get();
         demandePDR1.setTraite(true);
@@ -250,25 +326,26 @@ public class DocumentsAPIs {
 
     }
 
-    @GetMapping("/PDRs")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('CADRE')" )
-    public List<PDR> getAllPDR() {
-//        System.out.println("new demandes"+demandeRepository.findAllByTraite(false));
-        return pdrRepository.findAll();
-    }
+
 
 
     @GetMapping("/DemandesByStation/{codeStation}")
     @PreAuthorize("hasRole('CADRE')")
     public List<DemandeDeTravail> getDemandesByStation(@PathVariable String codeStation) {
 //        System.out.println("new demandes"+demandeRepository.findAllByTraite(false));
-        return demandeRepository.findByPanne_Equipement_Station_CodeStationAndTraite(codeStation,false);
+        return demandeRepository.findByPanne_Equipement_Station_CodeStationAndTraiteOrderByDateDesc(codeStation,false);
+    }
+@GetMapping("/DerniereDemandePourStation/{codeStation}")
+    @PreAuthorize("hasRole('CADRE')")
+    public DemandeDeTravail getDerniereDemandeTraitePourStation(@PathVariable String codeStation) {
+
+        return demandeRepository.findTopByPanne_Equipement_Station_CodeStationAndTraiteOrderByDateDesc(codeStation,true);
     }
 
     @GetMapping("/NouvelleFiche/{username}")
     @PreAuthorize("hasRole('INTERVENANT') or hasRole('ADMIN')")
     public List<FicheDeTravaux> getFicheParIntervenant(@PathVariable String username) {
-        List<OrdreDeTravail> ordreDeTravails = ordreRepository.findAllByIntervenants_UsernameAndTraite(username,true);
+        List<OrdreDeTravail> ordreDeTravails = ordreRepository.findAllByIntervenants_UsernameAndTraiteOrderByDateDesc(username,true);
         List<FicheDeTravaux> ficheDeTravauxes = new ArrayList<>();
         for (OrdreDeTravail ordreDeTravail : ordreDeTravails) {
             FicheDeTravaux ficheDeTravaux = ficheRepository.findByOrdreDeTravailAndRempli(ordreDeTravail,false);
@@ -279,7 +356,7 @@ public class DocumentsAPIs {
     @GetMapping("/Documents/{username}/FichesDeTravaux")
     @PreAuthorize("hasRole('INTERVENANT') or hasRole('ADMIN')")
     public List<FicheDeTravaux> getFichesOfIntervenant(@PathVariable String username) {
-        List<OrdreDeTravail> ordreDeTravails = ordreRepository.findAllByIntervenants_UsernameAndTraite(username,true);
+        List<OrdreDeTravail> ordreDeTravails = ordreRepository.findAllByIntervenants_UsernameAndTraiteOrderByDateDesc(username,true);
         List<FicheDeTravaux> ficheDeTravauxes = new ArrayList<>();
         for (OrdreDeTravail ordreDeTravail : ordreDeTravails) {
             FicheDeTravaux ficheDeTravaux = ficheRepository.findByOrdreDeTravailAndRempli(ordreDeTravail,true);
@@ -310,13 +387,39 @@ public class DocumentsAPIs {
     @PreAuthorize("hasRole('CADRE')")
     public OrdreDeTravail saveOrdreDeTravail(@Valid @RequestBody OrdreDeTravail ordreDeTravail,@PathVariable String cadreUsername) {
 
-        System.out.println("save ordre called");
-       System.out.println(ordreDeTravail);
+//        System.out.println("save ordre called");
+//       System.out.println(ordreDeTravail);
 
         Cadre cadre= cadreRepository.findByUsername(cadreUsername);
         ordreDeTravail.setCadre(cadre);
 
+        for (Intervenant intervenant :ordreDeTravail.getIntervenants()){
+            Intervenant intervenant1 = intervenantRepository.findByMatricule(intervenant.getMatricule());
+            intervenant1.setDisponible(false);
+            intervenantRepository.save(intervenant1);
+        }
+
+        for (DemandeDeTravail demandeDeTravail: ordreDeTravail.getDemandeDeTravails()){
+            Equipement equipement= equipementRepository.findByEquipementNS(demandeDeTravail.getPanne().getEquipement().getEquipementNS());
+            equipement.setDateDernierePanne(new Date());
+//            for (Composant composant : equipement.getComposants()){
+//                System.out.println(composant.getDesignation());
+//
+//                composant.setEquipement(equipement);
+//                composantRepositoty.save(composant);
+//            }
+//
+
+            equipementRepository.save(equipement);
+        }
+
+
+
+
+
+
         OrdreDeTravail ordreDeTravail1 =  ordreRepository.save(ordreDeTravail);
+
         for (DemandeDeTravail demandeDeTravail:ordreDeTravail.getDemandeDeTravails()
         ) {
             demandeDeTravail.setOrdreDeTravail(ordreDeTravail);
@@ -330,8 +433,8 @@ public class DocumentsAPIs {
     @PreAuthorize("hasRole('CADRE')")
     public ResponseEntity<?> saveDemandePDR(@Valid @RequestBody List<DemandePDRLigneForm>demandePDRlignesForms, @PathVariable String cadreUsername,@PathVariable Long idOrdre) {
         OrdreDeTravail ordreDeTravail = ordreRepository.findById(idOrdre).get();
-        System.out.println("save demandePDR called");
-        System.out.println(demandePDRlignesForms);
+//        System.out.println("save demandePDR called");
+//        System.out.println(demandePDRlignesForms);
         Cadre cadre= cadreRepository.findByUsername(cadreUsername);
         DemandePDR demandePDR = new DemandePDR();
         demandePDR.setCadre(cadre);
@@ -343,7 +446,7 @@ public class DocumentsAPIs {
 
         }
         demandePDR.setDemandePDRlignes(demandePDRlignes);
-        System.out.println("ooooooooooooooooooooorde"+ordreDeTravail.getIdDocument());
+//        System.out.println("ooooooooooooooooooooorde"+ordreDeTravail.getIdDocument());
 
         demandePdrRepository.save(demandePDR);
 
@@ -409,6 +512,17 @@ public class DocumentsAPIs {
         ficheDeTravaux.setStation(ordreDeTravail.getDemandeDeTravails().get(0).getPanne().getEquipement().getStation());
         FicheDeTravaux ficheDeTravaux1 = ficheRepository.save(ficheDeTravaux);
 
+         final String ACCOUNT_SID = "AC6c4303c22d93d9db6a6a0b6c530ce547";
+         final String AUTH_TOKEN = "a5dd8566573bcf43c7f5b6dd85977195";
+        Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+//        for(Intervenant inter : ficheDeTravaux.getOrdreDeTravail().getIntervenants()){
+//            String numero = "+213"+inter.getNumTelephone().substring(1);
+//            System.out.println(numero);
+//            Message message = Message.creator(new PhoneNumber(numero),
+//                    new PhoneNumber("+15109372091"),
+//                    "une nouvelle fiche de traveaux a été crée").create();
+//            System.out.println(message.getSid());
+//        }
         return ficheDeTravaux;
     }
 
@@ -429,6 +543,7 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
 
         demandePdrRepository.save(ficheDeTravaux1.getOrdreDeTravail().getDemandePDR());
 }
+         ficheDeTravaux1.setRemplissageIntervenantdate(new Date());
         ficheRepository.save(ficheDeTravaux1);
 
         return new ResponseEntity<>(new ResponseMessage("fiche updated successfully!"), HttpStatus.OK);
@@ -438,7 +553,7 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
     @GetMapping("/NouvelleFiche/ChefStation/{username}")
     @PreAuthorize("hasRole('CHEFSTATION')")
     public List<FicheDeTravaux> getFicheNouvelleDeChef(@PathVariable String username) {
-        return ficheRepository.findAllByStation_ChefStation_UsernameAndValideChefAndRempli(username,false,true);
+        return ficheRepository.findAllByStation_ChefStation_UsernameAndValideChefAndRempliOrderByDateDesc(username,false,true);
     }
 
 
@@ -447,7 +562,7 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
     public List<FicheDeTravaux> getFicheNouvelleDeCommercial(@PathVariable String username) {
         List<FicheDeTravaux> listefinale = new ArrayList<>();
     Utilisateur utilisateur = userRepository.findByUsername(username).get();
-    List<FicheDeTravaux> list = ficheRepository.findAllByValideChefAndRempli(false,true);
+    List<FicheDeTravaux> list = ficheRepository.findAllByValideChefAndRempliOrderByDateDesc(false,true);
     for (FicheDeTravaux ficheDeTravaux: list){
         if (ficheDeTravaux.getOrdreDeTravail().getDemandeDeTravails().get(0).getEmetteur() == utilisateur)
             listefinale.add(ficheDeTravaux);
@@ -460,7 +575,7 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
     public List<FicheDeTravaux> getAllFicheDeCommercial(@PathVariable String username) {
         List<FicheDeTravaux> listefinale = new ArrayList<>();
         Utilisateur utilisateur = userRepository.findByUsername(username).get();
-        List<FicheDeTravaux> list = ficheRepository.findAllByValideChefAndRempli(true,true);
+        List<FicheDeTravaux> list = ficheRepository.findAllByValideChefAndRempliOrderByDateDesc(true,true);
         for (FicheDeTravaux ficheDeTravaux: list){
             if (ficheDeTravaux.getOrdreDeTravail().getDemandeDeTravails().get(0).getEmetteur() == utilisateur)
                 listefinale.add(ficheDeTravaux);
@@ -468,23 +583,36 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
         return listefinale;
     }
 
+    @GetMapping("/Documents/AllFiches")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<FicheDeTravaux> getAllfichesPourAdminStatistiques() {
+        return ficheRepository.findAll();
+    }
+
+
+
+    @GetMapping("/AllFiche")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<FicheDeTravaux> getAllFichesTravaux() {
+        return ficheRepository.findAll();
+    }
 
     @GetMapping("/NouvelleFiche/Cadre/{username}")
     @PreAuthorize("hasRole('CADRE')")
     public List<FicheDeTravaux> getFicheNouvelleDeCadre(@PathVariable String username) {
-        return ficheRepository.findAllByOrdreDeTravail_Cadre_UsernameAndValideCadre(username,false);
+        return ficheRepository.findAllByOrdreDeTravail_Cadre_UsernameAndValideCadreOrderByDateDesc(username,false);
     }
 
     @GetMapping("/AllFiche/ChefStation/{username}")
     @PreAuthorize("hasRole('CHEFSTATION')")
     public List<FicheDeTravaux> getAllFicheDeChef(@PathVariable String username) {
-        return ficheRepository.findAllByStation_ChefStation_UsernameAndValideChefAndRempli(username,true,true);
+        return ficheRepository.findAllByStation_ChefStation_UsernameAndValideChefAndRempliOrderByDateDesc(username,true,true);
     }
 
     @GetMapping("/AllFiche/Cadre/{username}")
     @PreAuthorize("hasRole('CADRE')")
     public List<FicheDeTravaux> getAllFicheDeCadre(@PathVariable String username) {
-        return ficheRepository.findAllByOrdreDeTravail_Cadre_UsernameAndValideCadre(username,true);
+        return ficheRepository.findAllByOrdreDeTravail_Cadre_UsernameAndValideCadreOrderByDateDesc(username,true);
     }
 
 
@@ -493,6 +621,12 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
     public ResponseEntity<?> ValiderFicheParChef(@PathVariable Long idDocument) {
  FicheDeTravaux ficheDeTravaux = ficheRepository.findById(idDocument).get();
  ficheDeTravaux.setValideChef(true);
+ ficheDeTravaux.setValidationChefdate(new Date());
+ for (Intervenant intervenant : ficheDeTravaux.getOrdreDeTravail().getIntervenants()){
+     Intervenant intervenant1 = intervenantRepository.findByMatricule(intervenant.getMatricule());
+     intervenant1.setDisponible(true);
+     intervenantRepository.save(intervenant1);
+ }
  ficheRepository.save(ficheDeTravaux);
         return new ResponseEntity<>(new ResponseMessage("fiche updated successfully!"), HttpStatus.OK);
 
@@ -503,11 +637,46 @@ if (ficheDeTravaux.getOrdreDeTravail().getDemandePDR() != null) {
  FicheDeTravaux ficheDeTravaux = ficheRepository.findById(idDocument).get();
  ficheDeTravaux.setTempTotal(tempTotal);
  ficheDeTravaux.setValideCadre(true);
+ ficheDeTravaux.setValidationCadredate(new Date());
  if (ficheDeTravaux.isValideMagasinier()) ficheDeTravaux.setTraite(true);
  ficheRepository.save(ficheDeTravaux);
+ inceremetIntervenantNbheure(ficheDeTravaux.getOrdreDeTravail().getIntervenants(),tempTotal);
         return new ResponseEntity<>(new ResponseMessage("fiche updated successfully!"), HttpStatus.OK);
+    }
 
+    public void inceremetIntervenantNbheure(List<Intervenant> list,int tempTotal){
+        boolean found = false;
+        LocalDate date = LocalDate.now();
+        int year = date.getYear();
+        int month = date.getMonthValue();
+        for (Intervenant inter: list) {
+            if (inter.getNbHeurs() != null){
+                      for (NbHeureLigne ligne : inter.getNbHeurs()){
+                          if (ligne.getDate().equals(year+"-"+month)) {
+                              found = true;
+                              ligne.setNbHeure(ligne.getNbHeure() + tempTotal);
+                              break;
+                          }
+                      }
+                      if (!found) {
+                          inter.getNbHeurs().add(new NbHeureLigne(year+"-"+month,tempTotal,inter));
+                      }
+            } else {
+                List<NbHeureLigne> newList = new ArrayList<>();
+                newList.add(new NbHeureLigne(year+"-"+month,tempTotal,inter));
+                inter.setNbHeurs(newList);
+            }
+intervenantRepository.save(inter);
+        }
     }
 
 
+
+    @GetMapping("/Pannes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Panne> getAllPannes() {
+
+        return panneRepository.findAll();
+
+    }
 }

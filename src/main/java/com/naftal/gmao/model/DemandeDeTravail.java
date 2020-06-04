@@ -10,9 +10,39 @@ import org.hibernate.annotations.FetchMode;
 import javax.persistence.*;
 
 @Entity
+
+
 @NamedEntityGraph(name = "DemandeDeTravailGraph",
-        attributeNodes = {@NamedAttributeNode("ordreDeTravail"),@NamedAttributeNode("panne"),@NamedAttributeNode("emetteur")}
+        attributeNodes = {
+                @NamedAttributeNode(value = "panne",subgraph = "panneGraph"),
+                @NamedAttributeNode(value = "emetteur",subgraph = "UserGraph")
+        },subgraphs = {
+        @NamedSubgraph(
+                name = "panneGraph",
+                attributeNodes = {
+                        @NamedAttributeNode(value = "equipement",subgraph = "equipementGraph"),
+                        @NamedAttributeNode(value = "composants")
+                }
+        ),
+        @NamedSubgraph(
+                name = "equipementGraph",
+                attributeNodes = {
+                        @NamedAttributeNode(value = "station",subgraph = "stationGraph")
+                }
+        ),@NamedSubgraph(
+        name = "stationGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "chefStation",subgraph = "UserGraph")
+        }
+),@NamedSubgraph(
+        name = "UserGraph",
+        attributeNodes = {
+                @NamedAttributeNode("roles")
+        }
 )
+}
+)
+
 
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
@@ -20,10 +50,9 @@ import javax.persistence.*;
 public class DemandeDeTravail extends Document {
 
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     @JoinColumn(name = "idOrdre")
-    @Fetch(FetchMode.JOIN)
     private OrdreDeTravail ordreDeTravail;
 
     @ManyToOne

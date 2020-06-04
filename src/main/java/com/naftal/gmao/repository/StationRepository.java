@@ -4,12 +4,14 @@ import com.naftal.gmao.model.ChefStation;
 import com.naftal.gmao.model.Station;
 import com.naftal.gmao.model.TypeStation;
 import com.naftal.gmao.model.Utilisateur;
+import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 
@@ -18,8 +20,10 @@ public interface StationRepository extends JpaRepository<Station, String> {
 
 
 
-    @EntityGraph(value = "Station.chefStation")
-   List<Station> findAll();
+
+
+ @EntityGraph(value = "Station.chefStation")
+   List<Station> findAllByOrderByCodeStationAsc();
     @EntityGraph(value = "Station.chefStation")
     Station findByCodeStation(String codeStation);
     @EntityGraph(value = "Station.chefStation")

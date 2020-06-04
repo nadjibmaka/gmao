@@ -38,7 +38,7 @@ public class StationAPIs {
     @PreAuthorize("hasRole('ADMIN')")
     public List<Station> getStations() {
 
-        List<Station> list = stationRepository.findAll();
+        List<Station> list = stationRepository.findAllByOrderByCodeStationAsc();
 //        System.out.println(list);
         return list;
     }
@@ -77,8 +77,8 @@ public class StationAPIs {
     public ResponseEntity<?> registerStation(@Valid @RequestBody EditStationForm editForm , @PathVariable String codeStation) {
 
 
-        System.out.println("put station called");
-        System.out.println(editForm.getRaisonSocial());
+//        System.out.println("put station called");
+//        System.out.println(editForm.getRaisonSocial());
 
         Station station = stationRepository.findByCodeStation(codeStation);
         station.setTempTrajet(editForm.getTempTrajet());
@@ -86,6 +86,8 @@ public class StationAPIs {
         station.setDistrict(editForm.getDistrict());
         station.setDistance(editForm.getDistance());
         station.setAdresse(editForm.getAdresse());
+        station.setLatitude(editForm.getLatitude());
+        station.setLongitude(editForm.getLongitude());
 
         TypeStation typeStation;
         switch (editForm.getTypeStation()){
@@ -187,16 +189,14 @@ public class StationAPIs {
     }
 
     @GetMapping("/stations/equipements/{codeStation}")
-    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL') or hasRole('ADMIN') or hasRole('CADRE')")
     public List<Equipement> getStationEquipements(@PathVariable String codeStation)
-
     {
-
-        return equipementRepository.findByStationCodeStation(codeStation);
+        return equipementRepository.findByStationCodeStationOrderByEquipementNS(codeStation);
     }
 
     @GetMapping("/stations/equipements/{equipement}/composants")
-    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL')")
+    @PreAuthorize("hasRole('CHEFSTATION') or hasRole('COMMERCIAL') or hasRole('CADRE')")
     public List<Composant> getComposantsOfEquipements(@PathVariable String equipement)
 
     {

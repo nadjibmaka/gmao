@@ -29,9 +29,8 @@ public class DemandePDRligne {
     private int quantiteUtilise;
 
     @JsonIgnore
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="IDdemandePDR")
-    @Fetch(FetchMode.JOIN)
     private DemandePDR demandePDR;
 
 

@@ -27,9 +27,13 @@ public class PDR {
     private Long prix ;
 
     @JsonIgnore
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "pdr")
+    @OneToMany(mappedBy = "pdr",fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private List<DemandePDRligne> demandePDRlignes;
 
-
+    public PDR(String marque, String designation, Long prix) {
+        this.marque = marque;
+        this.designation = designation;
+        this.prix = prix;
+    }
 }

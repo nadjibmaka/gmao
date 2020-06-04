@@ -15,26 +15,104 @@ import java.util.List;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Data
+
+//@NamedEntityGraph(name = "OrdreGraph",
+//        attributeNodes = {
+//                @NamedAttributeNode(value = "demandePDR",subgraph = "demandePDRGraph"),
+//                @NamedAttributeNode(value = "demandeDeTravails",subgraph = "demandeDeTravailGraph"),
+//                @NamedAttributeNode(value = "ficheDeTravaux")
+//
+//        },subgraphs = {
+//        @NamedSubgraph(name = "demandePDRGraph",
+//                attributeNodes = {
+//                        @NamedAttributeNode(value = "cadre",subgraph = "UserRole"),
+//                        @NamedAttributeNode(value = "magasinier",subgraph = "UserRole")
+//                }
+//
+//        ),@NamedSubgraph(
+//        name = "demandeDeTravailGraph",
+//        attributeNodes = {
+//                @NamedAttributeNode(value = "panne",subgraph = "panneEquipements")
+//        }
+//),@NamedSubgraph(name = "panneEquipements",
+//        attributeNodes = {
+//                @NamedAttributeNode(value = "equipement")
+//        })
+//}
+//)
+
+@NamedEntityGraph(
+        name = "OrdreGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "demandeDeTravails",subgraph = "dtGraph"),
+                @NamedAttributeNode(value = "demandePDR",subgraph = "dpGraph"),
+                @NamedAttributeNode(value = "ficheDeTravaux",subgraph = "ftGraph"),
+        },subgraphs = {
+@NamedSubgraph(
+                name = "dpGraph",
+                attributeNodes = {
+                        @NamedAttributeNode(value = "cadre",subgraph = "UserGraph"),
+                        @NamedAttributeNode(value = "magasinier",subgraph = "UserGraph")
+                                    }
+),@NamedSubgraph(
+        name = "dtGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "panne",subgraph = "panneGraph"),
+                @NamedAttributeNode(value = "emetteur",subgraph = "UserGraph")
+        }
+),@NamedSubgraph(
+        name = "panneGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "equipement",subgraph = "equipementGraph")
+        }
+),@NamedSubgraph(
+        name = "equipementGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "station",subgraph = "stationGraph")
+        }
+),@NamedSubgraph(
+        name = "stationGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "chefStation",subgraph = "UserGraph")
+        }
+),@NamedSubgraph(
+        name = "UserGraph",
+        attributeNodes = {
+                @NamedAttributeNode("roles")
+        }
+),@NamedSubgraph(
+        name = "ftGraph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "station",subgraph = "stationGraph")
+        }
+)
+}
+)
+
+
+
+
 public class OrdreDeTravail  extends  Document{
 
+
+    @Lob
     private String instruction;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     @JoinColumn(name = "matriculeCadre")
-    @Fetch(FetchMode.JOIN)
     private Cadre cadre;
 
-    @OneToMany(mappedBy = "ordreDeTravail" , fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "ordreDeTravail")
     @Fetch(FetchMode.SUBSELECT)
     private List<DemandeDeTravail> demandeDeTravails;
 
-    @OneToOne(mappedBy = "ordreDeTravail")
+    @OneToOne(mappedBy = "ordreDeTravail",fetch = FetchType.LAZY)
     @JsonIgnore
     @Fetch(FetchMode.JOIN)
     private FicheDeTravaux ficheDeTravaux;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "intervenants_ordreDeTravails",
             joinColumns = @JoinColumn(name = "idDocument"),
             inverseJoinColumns = @JoinColumn(name = "matricule"))

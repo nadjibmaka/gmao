@@ -67,6 +67,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/**/*.css",
                         "/**/*.js")
                 .permitAll()
+                .antMatchers(
+                        "/**/*.eot",
+                        "/**/*.woff",
+                        "/**/*.woff2",
+                        "/**/*.ttf").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()

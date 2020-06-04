@@ -18,12 +18,19 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+//@NamedEntityGraph(name = "Panne",
+//        attributeNodes = {
+//                @NamedAttributeNode("equipement")
+//        }
+//)
+
 public class Panne {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idPanne;
 
+    @Lob
     private String description;
 
 
@@ -46,8 +53,7 @@ public class Panne {
     private List<Composant> composants = new ArrayList<>();
 
     @JsonIgnore
-    @OneToOne(mappedBy = "panne")
-    @Fetch(FetchMode.JOIN)
+    @OneToOne(mappedBy = "panne",fetch = FetchType.LAZY)
     private DemandeDeTravail demandeDeTravail;
 
 }

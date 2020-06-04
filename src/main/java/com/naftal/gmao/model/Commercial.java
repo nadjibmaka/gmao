@@ -20,7 +20,7 @@ import java.util.List;
 public class Commercial extends Utilisateur {
 
     @JsonIgnore
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "emetteur")
+    @OneToMany(mappedBy = "emetteur")
     @Fetch(FetchMode.SUBSELECT)
     private List<DemandeDeTravail> demandeDeTravails;
 

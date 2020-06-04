@@ -24,14 +24,12 @@ private UniteMesure unitemesure;
 
 private String designation;
 
-private  Double prix;
 
 private String type;
 
-@ManyToOne
+@ManyToOne(fetch = FetchType.LAZY)
 @JoinColumn(name="equipementNS")
 @JsonIgnore
-@Fetch(FetchMode.JOIN)
 private Equipement equipement;
 
 }

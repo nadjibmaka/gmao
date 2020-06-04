@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.OneToMany;
+import javax.persistence.*;
 import java.util.List;
 import java.util.Set;
 
@@ -17,9 +15,14 @@ import java.util.Set;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Data
+@NamedEntityGraph(name = "magasinierGraph"
+        ,attributeNodes = {
+        @NamedAttributeNode(value = "roles")
+}
+)
 public class Magasinier extends Utilisateur {
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "magasinier")
+    @OneToMany(mappedBy = "magasinier",fetch = FetchType.LAZY)
     @JsonIgnore
     @Fetch(FetchMode.SUBSELECT)
     private List<DemandePDR> demandePDRs;

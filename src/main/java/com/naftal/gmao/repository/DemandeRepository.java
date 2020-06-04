@@ -11,14 +11,19 @@ import java.util.List;
 
 @Repository
 public interface DemandeRepository extends JpaRepository<DemandeDeTravail, Long> {
+
     @EntityGraph(value = "DemandeDeTravailGraph")
-    List<DemandeDeTravail> findAllByEmetteur_Username(String username);
+    List<DemandeDeTravail> findAllByEmetteur_UsernameOrderByDateDesc(String username);
     @EntityGraph(value = "DemandeDeTravailGraph")
-    List<DemandeDeTravail>findAllByTraite(boolean traite);
+    List<DemandeDeTravail>findAllByTraiteOrderByDateDesc(boolean traite);
     @EntityGraph(value = "DemandeDeTravailGraph")
     DemandeDeTravail findByIdDocument(Long idDocument);
     @EntityGraph(value = "DemandeDeTravailGraph")
-    List<DemandeDeTravail> findByPanne_Equipement_Station_CodeStationAndTraite(String codeStation,Boolean traite);
+    List<DemandeDeTravail> findByPanne_Equipement_Station_CodeStationAndTraiteOrderByDateDesc(String codeStation,Boolean traite);
+
+    @EntityGraph(value = "DemandeDeTravailGraph")
+    DemandeDeTravail findTopByPanne_Equipement_Station_CodeStationAndTraiteOrderByDateDesc(String codeStation,Boolean traite);
+
 
 //    @Query("SELECT distinct  dt FROM Station s join Panne p on p.station=s join Document d on p=d.panne join DemandeDeTravail dt on dt.idDocument=d.idDocument where d.traite=0 and s.codeStation=:codeStation")
 //    List<DemandeDeTravail>findByStation(String codeStation);

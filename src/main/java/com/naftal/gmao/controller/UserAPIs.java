@@ -108,24 +108,24 @@ public class UserAPIs {
     public ResponseEntity<?> registerUser(@Valid @RequestBody EditForm editForm , @PathVariable String matricule) {
 
 
-        System.out.println(editForm);
+//        System.out.println(editForm);
         Utilisateur user = userRepository.findByMatricule(matricule);
 
         for (Role r : user.getRoles()){
 
             if (r.getName() == RoleName.ROLE_CHEFSTATION){
-                System.out.println("entered inside role station");
-                System.out.println("new station code is "+editForm.getStation());
+//                System.out.println("entered inside role station");
+//                System.out.println("new station code is "+editForm.getStation());
                 ChefStation chefStation = chefStationRepository.findByMatricule(matricule);
                 Station station = stationRepository.findByCodeStation(editForm.getStation());
                 chefStation.setStation(station);
                 chefStationRepository.save(chefStation);
             } else
             if (r.getName() == RoleName.ROLE_INTERVENANT){
-                System.out.println("entered inside role intervenanat");
+//                System.out.println("entered inside role intervenanat");
 
                 Intervenant intervenant = intervenantRepository.findByMatricule(matricule);
-                System.out.println(editForm.getSecteur());
+//                System.out.println(editForm.getSecteur());
                 if (editForm.getSecteur().equals("Chlef")) intervenant.setSecteur(Secteur.Chlef);
                 else if (editForm.getSecteur().equals("Ghelizane")) intervenant.setSecteur(Secteur.Ghelizane);
                 else if (editForm.getSecteur().equals("Tiaret")) intervenant.setSecteur(Secteur.Tiaret);
@@ -177,6 +177,15 @@ public class UserAPIs {
         userRepository.save(utilisateur);
 
         return new ResponseEntity<>(new ResponseMessage("Mot de passe changé avec succes"), HttpStatus.OK);
+    }
+
+
+    @GetMapping("/Intervenant/{username}/nbHeure")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INTERVENANT')")
+    public int getNbHeureOfIntervenant(@PathVariable String username) {
+        Intervenant intervenant = intervenantRepository.findByUsername(username);
+        if (intervenant.getNbHeurs().size() == 0) return 0; else
+        return intervenant.getNbHeurs().get(intervenant.getNbHeurs().size()-1).getNbHeure();
     }
 
 

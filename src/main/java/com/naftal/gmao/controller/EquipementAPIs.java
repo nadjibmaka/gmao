@@ -32,7 +32,7 @@ public class EquipementAPIs {
     public List<Equipement> getEquipements() {
 //        System.out.println("get equipements called");
 
-        List<Equipement> list = equipementRepository.findByExiste(true);
+        List<Equipement> list = equipementRepository.findByExisteOrderByEquipementNS(true);
         return list;
     }
 

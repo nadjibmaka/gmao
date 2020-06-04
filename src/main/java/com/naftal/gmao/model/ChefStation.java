@@ -17,19 +17,24 @@ import java.util.Set;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Data
+@NamedEntityGraph(name = "chefstationGraph"
+        ,attributeNodes = {
+        @NamedAttributeNode(value = "roles")
+}
+)
+
+
 public class ChefStation extends Utilisateur{
 
 
-    @OneToOne(optional = false)
+    @OneToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     @JoinColumn(name = "codeStation")
-    @Fetch(FetchMode.JOIN)
     private Station station;
 
 
     @JsonIgnore
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "emetteur")
-    @Fetch(FetchMode.SUBSELECT)
+    @OneToMany(mappedBy = "emetteur",fetch = FetchType.LAZY)
     private List<DemandeDeTravail> demandeDeTravails;
 
 
